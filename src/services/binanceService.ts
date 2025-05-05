@@ -991,7 +991,9 @@ class BinanceService {
     const side = position.type === 'long' ? 'SELL' : 'BUY';
 
     // Ensure quantity is positive
-    const quantity = size ? Math.abs(size) : Math.abs(position.size);
+    const rawQuantity = size ? Math.abs(size) : Math.abs(position.size);
+    // Apply precision adjustment
+    const quantity = this.adjustQuantityPrecision(position.symbol, rawQuantity);
 
     // Base parameters for the order
     const baseParams: Record<string, any> = {
@@ -1203,12 +1205,16 @@ class BinanceService {
         // Determine the side (opposite of position type)
         const side = position.type === 'long' ? 'SELL' : 'BUY';
 
+        // Ensure quantity is positive and apply precision
+        const rawQuantity = Math.abs(position.size);
+        const quantity = this.adjustQuantityPrecision(position.symbol, rawQuantity);
+
         const baseParams = {
           apiKey: this.apiKey,
           symbol: position.symbol,
           side,
           type: 'MARKET',
-          quantity: Math.abs(position.size),
+          quantity,
           positionSide: position.type === 'long' ? 'LONG' : 'SHORT',
           timestamp: timestamp.toString(),
           recvWindow: websocketConfig.settings.recvWindow

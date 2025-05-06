@@ -7,8 +7,40 @@ import { newsService } from '../services/newsService';
 export function ConnectionStatus() {
   const [binanceStatus, setBinanceStatus] = useState<'connecting' | 'connected' | 'disconnected'>('disconnected');
   const [newsStatus, setNewsStatus] = useState<'disconnected' | 'connecting' | 'connected'>('disconnected');
+  const [showBinanceFull, setShowBinanceFull] = useState(false);
+  const [showNewsFull, setShowNewsFull] = useState(false);
   const lastResponseTime = useRef<number>(0);
   const { apiKey, apiSecret } = useSettings();
+  
+  // Binance tam metin gösterildikten 2 saniye sonra otomatik kapanma
+  useEffect(() => {
+    let timeoutId: number | undefined;
+    
+    if (showBinanceFull) {
+      timeoutId = window.setTimeout(() => {
+        setShowBinanceFull(false);
+      }, 2000);
+    }
+    
+    return () => {
+      if (timeoutId) window.clearTimeout(timeoutId);
+    };
+  }, [showBinanceFull]);
+  
+  // News tam metin gösterildikten 2 saniye sonra otomatik kapanma
+  useEffect(() => {
+    let timeoutId: number | undefined;
+    
+    if (showNewsFull) {
+      timeoutId = window.setTimeout(() => {
+        setShowNewsFull(false);
+      }, 2000);
+    }
+    
+    return () => {
+      if (timeoutId) window.clearTimeout(timeoutId);
+    };
+  }, [showNewsFull]);
   
   useEffect(() => {
     // Monitor Binance WebSocket connection status
@@ -76,7 +108,10 @@ export function ConnectionStatus() {
   return (
     <div className="bg-binance-black/80 backdrop-blur-sm rounded-full py-1.5 px-3 flex items-center gap-2 border border-binance-lightgray/20">
       {/* Binance WebSocket Status */}
-      <div className="flex items-center gap-1">
+      <div 
+        className="flex items-center gap-1 cursor-pointer"
+        onClick={() => setShowBinanceFull(prev => !prev)}
+      >
         {binanceStatus === 'connected' ? (
           <div className="relative">
             <Wifi className="h-4 w-4 text-binance-green" />
@@ -94,17 +129,21 @@ export function ConnectionStatus() {
               ? 'text-binance-yellow' 
               : 'text-binance-red'
         }`}>
-          {binanceStatus === 'connected' 
-            ? 'Binance' 
-            : binanceStatus === 'connecting' 
-              ? 'Binance...' 
-              : 'Binance'
-          }
+          {showBinanceFull ? 'Binance' : (
+            <>
+              <span className="md:hidden">B</span>
+              <span className="hidden md:inline">Binance</span>
+            </>
+          )}
+          {binanceStatus === 'connecting' && '...'}
         </span>
       </div>
       
       {/* News WebSocket Status */}
-      <div className="flex items-center gap-1">
+      <div 
+        className="flex items-center gap-1 cursor-pointer"
+        onClick={() => setShowNewsFull(prev => !prev)}
+      >
         {newsStatus === 'connected' ? (
           <div className="relative">
             <Rss className="h-4 w-4 text-binance-green" />
@@ -122,12 +161,13 @@ export function ConnectionStatus() {
               ? 'text-binance-yellow' 
               : 'text-binance-red'
         }`}>
-          {newsStatus === 'connected' 
-            ? 'News' 
-            : newsStatus === 'connecting' 
-              ? 'News...' 
-              : 'News'
-          }
+          {showNewsFull ? 'News' : (
+            <>
+              <span className="md:hidden">N</span>
+              <span className="hidden md:inline">News</span>
+            </>
+          )}
+          {newsStatus === 'connecting' && '...'}
         </span>
       </div>
     </div>

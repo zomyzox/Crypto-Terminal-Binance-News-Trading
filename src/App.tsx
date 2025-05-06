@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Terminal, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Terminal, ChevronLeft, ChevronRight, Search, X } from 'lucide-react';
 import { newsService } from './services/newsService';
 import { NewsCard } from './components/NewsCard';
 import { TradingPanel } from './components/TradingPanel';
@@ -238,6 +238,17 @@ function AppContent() {
       })
     : news;
 
+  // Filter temizleme fonksiyonunu ekleyelim
+  const clearFilter = useCallback(() => {
+    setFilteredSymbol(null);
+    setShowFilterMessage(false);
+    // Reset news to original state
+    const allNews = newsService.getAllNews();
+    setNews(allNews.slice(0, 20));
+    setCurrentPage(1);
+    setTotalPages(Math.ceil(allNews.length / 20));
+  }, []);
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-binance-black via-binance-darkgray to-binance-gray relative z-0">
       <SEO />
@@ -245,14 +256,21 @@ function AppContent() {
       <header className="bg-binance-black sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-0.5">
           <div className="flex items-center justify-between py-4">
-            <div className="flex items-center space-x-3">
-              <Terminal className="h-6 w-6 sm:h-8 sm:w-8 text-binance-yellow" />
-              <h1 className="text-xl sm:text-2xl font-bold bg-gradient-to-r from-binance-yellow to-binance-lightyellow bg-clip-text text-transparent">
+            <div className="flex items-center space-x-2">
+              <Terminal className="h-6 w-6 sm:h-7 sm:w-7 text-binance-yellow flex-shrink-0" />
+              <h1 className="text-base sm:text-xl font-bold bg-gradient-to-r from-binance-yellow to-binance-lightyellow bg-clip-text text-transparent whitespace-nowrap">
                 Crypto Terminal
               </h1>
             </div>
             <div className="flex items-center gap-3">
               <ConnectionStatus />
+              <button
+                onClick={() => setShowSpotlight(true)}
+                className="p-2 rounded-lg bg-binance-gray hover:bg-binance-lightgray transition-all transform hover:-translate-y-1 duration-200"
+                aria-label="Search"
+              >
+                <Search className="h-5 w-5 text-binance-yellow" />
+              </button>
               <SettingsMenu />
             </div>
           </div>
@@ -355,7 +373,14 @@ function AppContent() {
             <div className="flex items-center gap-2 text-sm">
               <span className="text-binance-yellow">Filter:</span>
               <span className="text-white">{filteredSymbol}</span>
-              <span className="text-gray-400 text-xs">(Press ESC to clear)</span>
+              <span className="hidden md:inline text-gray-400 text-xs">(Press ESC to clear)</span>
+              <button
+                onClick={clearFilter}
+                className="ml-2 p-1 rounded-full hover:bg-binance-gray/50 transition-colors"
+                aria-label="Clear filter"
+              >
+                <X className="w-4 h-4 text-gray-400 hover:text-white" />
+              </button>
             </div>
           </div>
         </div>

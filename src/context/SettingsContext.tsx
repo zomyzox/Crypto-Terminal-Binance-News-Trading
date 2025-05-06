@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState } from 'react';
+import React, { createContext, useContext, useState, useEffect } from 'react';
 
 type PositionMode = 'one-way' | 'hedge';
 type NetworkType = 'testnet' | 'mainnet';
@@ -26,6 +26,10 @@ interface SettingsContextType {
 
 const SettingsContext = createContext<SettingsContextType | undefined>(undefined);
 
+// Local storage keys
+const STORAGE_KEY_TRADE_BUTTONS = 'cryptoTerminal_tradeButtons';
+const STORAGE_KEY_GLOBAL_BUTTONS = 'cryptoTerminal_globalTradeButtons';
+
 // Default trade button values
 const DEFAULT_TRADE_BUTTONS: TradeButtonValues = {
   long: ['10K', '25K', '50K'],
@@ -40,10 +44,27 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
     network: 'mainnet' as NetworkType 
   });
   
-  // Initialize trade buttons state
-  const [tradeButtons, setTradeButtons] = useState<SymbolTradeButtons>({});
+  // Initialize trade buttons state from localStorage or defaults
+  const [tradeButtons, setTradeButtons] = useState<SymbolTradeButtons>(() => {
+    const saved = localStorage.getItem(STORAGE_KEY_TRADE_BUTTONS);
+    return saved ? JSON.parse(saved) : {};
+  });
+  
   // Global trade buttons that apply to all symbols
-  const [globalTradeButtons, setGlobalTradeButtons] = useState<TradeButtonValues>(DEFAULT_TRADE_BUTTONS);
+  const [globalTradeButtons, setGlobalTradeButtons] = useState<TradeButtonValues>(() => {
+    const saved = localStorage.getItem(STORAGE_KEY_GLOBAL_BUTTONS);
+    return saved ? JSON.parse(saved) : DEFAULT_TRADE_BUTTONS;
+  });
+
+  // Save to localStorage when trade buttons change
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEY_TRADE_BUTTONS, JSON.stringify(tradeButtons));
+  }, [tradeButtons]);
+
+  // Save to localStorage when global trade buttons change
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEY_GLOBAL_BUTTONS, JSON.stringify(globalTradeButtons));
+  }, [globalTradeButtons]);
 
   const setApiCredentials = (key: string, secret: string, network: NetworkType) => {
     setCredentials({ apiKey: key, apiSecret: secret, network });

@@ -4,6 +4,13 @@ import CryptoJS from 'crypto-js';
 type PositionMode = 'one-way' | 'hedge';
 type NetworkType = 'testnet' | 'mainnet';
 
+// Unique keys for LocalStorage
+const ENCRYPTION_KEY = 'cryptoTerminal_encKey';
+const STORAGE_KEY_API_KEY = 'cryptoTerminal_apiKey';
+const STORAGE_KEY_API_SECRET = 'cryptoTerminal_apiSecret';
+const STORAGE_KEY_NETWORK = 'cryptoTerminal_network';
+const STORAGE_KEY_SAVE_CREDENTIALS = 'cryptoTerminal_saveCredentials';
+
 // Define types for trade buttons
 export interface TradeButtonValues {
   long: string[];
@@ -19,12 +26,13 @@ interface SettingsContextType {
   positionMode: PositionMode;
   tradeButtons: SymbolTradeButtons;
   globalTradeButtons: TradeButtonValues;
-  saveApiKeysInCache: boolean;
+  saveCredentialsInCache: boolean;
   setPositionMode: (mode: PositionMode) => void;
   setApiCredentials: (key: string, secret: string, network: NetworkType) => void;
   setSymbolTradeButtons: (symbol: string, values: TradeButtonValues) => void;
   updateGlobalTradeButtons: (values: TradeButtonValues) => void;
-  setSaveApiKeysInCache: (save: boolean) => void;
+  setSaveCredentialsInCache: (save: boolean) => void;
+  clearCachedCredentials: () => void;
 }
 
 const SettingsContext = createContext<SettingsContextType | undefined>(undefined);
@@ -32,8 +40,6 @@ const SettingsContext = createContext<SettingsContextType | undefined>(undefined
 // Local storage keys
 const STORAGE_KEY_TRADE_BUTTONS = 'cryptoTerminal_tradeButtons';
 const STORAGE_KEY_GLOBAL_BUTTONS = 'cryptoTerminal_globalTradeButtons';
-const STORAGE_KEY_API_KEYS = 'cryptoTerminal_apiKeys';
-const STORAGE_ENCRYPTION_KEY = 'binance-api-encryption-key';
 
 // Default trade button values
 const DEFAULT_TRADE_BUTTONS: TradeButtonValues = {
@@ -41,49 +47,43 @@ const DEFAULT_TRADE_BUTTONS: TradeButtonValues = {
   short: ['10K', '25K', '50K']
 };
 
-// Helper functions for encrypting and decrypting API keys
-const encryptData = (data: any) => {
-  return CryptoJS.AES.encrypt(JSON.stringify(data), STORAGE_ENCRYPTION_KEY).toString();
+// Şifreli veriyi çözen fonksiyon
+const decryptData = (data: string | null): string => {
+  if (!data) return '';
+  try {
+    const bytes = CryptoJS.AES.decrypt(data, ENCRYPTION_KEY);
+    return bytes.toString(CryptoJS.enc.Utf8);
+  } catch (e) {
+    console.error('Decryption error:', e);
+    return '';
+  }
 };
 
-const decryptData = (encryptedData: string) => {
-  try {
-    const bytes = CryptoJS.AES.decrypt(encryptedData, STORAGE_ENCRYPTION_KEY);
-    return JSON.parse(bytes.toString(CryptoJS.enc.Utf8));
-  } catch (error) {
-    console.error('Failed to decrypt data:', error);
-    return null;
-  }
+// Veriyi şifreleyen fonksiyon
+const encryptData = (data: string): string => {
+  return CryptoJS.AES.encrypt(data, ENCRYPTION_KEY).toString();
 };
 
 export function SettingsProvider({ children }: { children: React.ReactNode }) {
   const [positionMode, setPositionMode] = useState<PositionMode>('one-way');
+  
+  // LocalStorage'dan şifreli API anahtarlarını al
   const [{ apiKey, apiSecret, network }, setCredentials] = useState(() => {
-    // Try to load API credentials from localStorage if they exist
-    const savedKeys = localStorage.getItem(STORAGE_KEY_API_KEYS);
-    if (savedKeys) {
-      try {
-        const decryptedKeys = decryptData(savedKeys);
-        if (decryptedKeys && decryptedKeys.apiKey && decryptedKeys.apiSecret) {
-          return { 
-            apiKey: decryptedKeys.apiKey, 
-            apiSecret: decryptedKeys.apiSecret, 
-            network: decryptedKeys.network || 'mainnet' as NetworkType 
-          };
-        }
-      } catch (error) {
-        console.error('Error loading saved API keys:', error);
-      }
-    }
+    const savedApiKey = localStorage.getItem(STORAGE_KEY_API_KEY);
+    const savedApiSecret = localStorage.getItem(STORAGE_KEY_API_SECRET);
+    const savedNetwork = localStorage.getItem(STORAGE_KEY_NETWORK);
+    
     return { 
-      apiKey: '', 
-      apiSecret: '', 
-      network: 'mainnet' as NetworkType 
+      apiKey: savedApiKey ? decryptData(savedApiKey) : '', 
+      apiSecret: savedApiSecret ? decryptData(savedApiSecret) : '', 
+      network: (savedNetwork ? decryptData(savedNetwork) : 'mainnet') as NetworkType 
     };
   });
   
-  const [saveApiKeysInCache, setSaveApiKeysInCache] = useState<boolean>(() => {
-    return localStorage.getItem(STORAGE_KEY_API_KEYS) !== null;
+  // API anahtarlarını önbellekte saklama tercihini al
+  const [saveCredentialsInCache, setSaveCredentialsInCache] = useState<boolean>(() => {
+    const saved = localStorage.getItem(STORAGE_KEY_SAVE_CREDENTIALS);
+    return saved ? JSON.parse(saved) : false;
   });
   
   // Initialize trade buttons state from localStorage or defaults
@@ -107,19 +107,35 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY_GLOBAL_BUTTONS, JSON.stringify(globalTradeButtons));
   }, [globalTradeButtons]);
-
-  // Save or remove API keys from localStorage based on saveApiKeysInCache setting
+  
+  // Save to localStorage when saveCredentialsInCache changes
   useEffect(() => {
-    if (saveApiKeysInCache && apiKey && apiSecret) {
-      const encryptedData = encryptData({ apiKey, apiSecret, network });
-      localStorage.setItem(STORAGE_KEY_API_KEYS, encryptedData);
-    } else if (!saveApiKeysInCache) {
-      localStorage.removeItem(STORAGE_KEY_API_KEYS);
+    localStorage.setItem(STORAGE_KEY_SAVE_CREDENTIALS, JSON.stringify(saveCredentialsInCache));
+    
+    // saveCredentialsInCache false olursa, localStorage'dan api anahtarlarını sil
+    if (!saveCredentialsInCache) {
+      localStorage.removeItem(STORAGE_KEY_API_KEY);
+      localStorage.removeItem(STORAGE_KEY_API_SECRET);
+      localStorage.removeItem(STORAGE_KEY_NETWORK);
     }
-  }, [saveApiKeysInCache, apiKey, apiSecret, network]);
+  }, [saveCredentialsInCache]);
 
   const setApiCredentials = (key: string, secret: string, network: NetworkType) => {
     setCredentials({ apiKey: key, apiSecret: secret, network });
+    
+    // Eğer önbellekte saklamak isteniyorsa, api anahtarlarını şifrele ve localStorage'a kaydet
+    if (saveCredentialsInCache) {
+      localStorage.setItem(STORAGE_KEY_API_KEY, encryptData(key));
+      localStorage.setItem(STORAGE_KEY_API_SECRET, encryptData(secret));
+      localStorage.setItem(STORAGE_KEY_NETWORK, encryptData(network));
+    }
+  };
+  
+  // API anahtarlarını önbellekten tamamen silen fonksiyon
+  const clearCachedCredentials = () => {
+    localStorage.removeItem(STORAGE_KEY_API_KEY);
+    localStorage.removeItem(STORAGE_KEY_API_SECRET);
+    localStorage.removeItem(STORAGE_KEY_NETWORK);
   };
 
   // Function to update trade button values for a specific symbol
@@ -144,11 +160,12 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
       network,
       tradeButtons,
       globalTradeButtons,
-      saveApiKeysInCache,
+      saveCredentialsInCache,
+      setSaveCredentialsInCache,
+      clearCachedCredentials,
       setSymbolTradeButtons,
       updateGlobalTradeButtons,
-      setApiCredentials,
-      setSaveApiKeysInCache
+      setApiCredentials
     }}>
       {children}
     </SettingsContext.Provider>

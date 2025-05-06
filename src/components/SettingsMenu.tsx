@@ -8,7 +8,16 @@ import { TradingConfigModal } from './TradingConfigModal';
 
 export function SettingsMenu() {
   const [isOpen, setIsOpen] = React.useState(false);
-  const { positionMode, setPositionMode, apiKey, apiSecret, network, setApiCredentials, saveApiKeysInCache, setSaveApiKeysInCache } = useSettings();
+  const { 
+    positionMode, 
+    setPositionMode, 
+    apiKey, 
+    apiSecret, 
+    network, 
+    setApiCredentials, 
+    saveCredentialsInCache, 
+    setSaveCredentialsInCache 
+  } = useSettings();
   const [hasValidCredentials, setHasValidCredentials] = useState(false);
   const [newApiKey, setNewApiKey] = React.useState(apiKey);
   const [newApiSecret, setNewApiSecret] = React.useState(apiSecret);
@@ -22,7 +31,18 @@ export function SettingsMenu() {
   const [connectionStatus, setConnectionStatus] = useState<'connecting' | 'connected' | 'disconnected'>('disconnected');
   const [credentialsSubmitted, setCredentialsSubmitted] = useState(false);
   const [credentialsChanged, setCredentialsChanged] = useState(false);
-  const [saveCacheChecked, setSaveCacheChecked] = useState(saveApiKeysInCache);
+  const [saveInCache, setSaveInCache] = useState(saveCredentialsInCache);
+
+  // Sayfa yüklendiğinde önbellekte API anahtarları varsa otomatik bağlantı kur
+  useEffect(() => {
+    if (apiKey && apiSecret && !credentialsSubmitted) {
+      binanceService.updateCredentials(apiKey, apiSecret, network);
+      setCredentialsSubmitted(true);
+      setNewApiKey(apiKey);
+      setNewApiSecret(apiSecret);
+      setSelectedNetwork(network);
+    }
+  }, [apiKey, apiSecret, network]);
 
   // Check if we have valid credentials
   useEffect(() => {
@@ -108,7 +128,6 @@ export function SettingsMenu() {
     setHasLoadedMode(false); // Reset hasLoadedMode when credentials change
     setCredentialsSubmitted(true);
     setCredentialsChanged(false);
-    setSaveApiKeysInCache(saveCacheChecked);
   };
   
   const handleLeverageSelect = (symbol: string, leverage: number) => {
@@ -128,8 +147,9 @@ export function SettingsMenu() {
     setCredentialsChanged(true);
   };
   
-  const handleSaveCacheChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setSaveCacheChecked(e.target.checked);
+  const handleSaveInCacheChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setSaveInCache(e.target.checked);
+    setSaveCredentialsInCache(e.target.checked);
   };
   
   const isConnected = connectionStatus === 'connected';
@@ -159,7 +179,7 @@ export function SettingsMenu() {
   // Determine button text based on credentials state and connection status
   const getButtonText = () => {
     if (!credentialsSubmitted || credentialsChanged || !newApiKey || !newApiSecret) {
-      return "Save Credentials";
+      return "Connect to Binance";
     }
     
     switch (connectionStatus) {
@@ -170,7 +190,7 @@ export function SettingsMenu() {
       case 'disconnected':
         return "Not connected to Binance";
       default:
-        return "Save Credentials";
+        return "Connect to Binance";
     }
   };
   
@@ -230,12 +250,12 @@ export function SettingsMenu() {
                     <div className="flex items-center mt-2">
                       <input
                         type="checkbox"
-                        id="saveApiKeysInCache"
-                        checked={saveCacheChecked}
-                        onChange={handleSaveCacheChange}
-                        className="h-3 w-3 text-binance-yellow rounded border-gray-300 focus:ring-binance-yellow/20"
+                        id="saveInCache"
+                        checked={saveInCache}
+                        onChange={handleSaveInCacheChange}
+                        className="h-3 w-3 rounded border-gray-300 text-binance-yellow focus:ring-binance-yellow/20"
                       />
-                      <label htmlFor="saveApiKeysInCache" className="ml-2 text-xs text-gray-500 dark:text-gray-400">
+                      <label htmlFor="saveInCache" className="ml-2 block text-xs text-gray-500 dark:text-gray-400">
                         Save API keys in browser cache
                       </label>
                     </div>

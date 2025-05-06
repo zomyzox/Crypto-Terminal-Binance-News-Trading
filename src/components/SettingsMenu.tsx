@@ -8,7 +8,7 @@ import { TradingConfigModal } from './TradingConfigModal';
 
 export function SettingsMenu() {
   const [isOpen, setIsOpen] = React.useState(false);
-  const { positionMode, setPositionMode, apiKey, apiSecret, network, setApiCredentials } = useSettings();
+  const { positionMode, setPositionMode, apiKey, apiSecret, network, setApiCredentials, saveApiKeysInCache, setSaveApiKeysInCache } = useSettings();
   const [hasValidCredentials, setHasValidCredentials] = useState(false);
   const [newApiKey, setNewApiKey] = React.useState(apiKey);
   const [newApiSecret, setNewApiSecret] = React.useState(apiSecret);
@@ -22,6 +22,7 @@ export function SettingsMenu() {
   const [connectionStatus, setConnectionStatus] = useState<'connecting' | 'connected' | 'disconnected'>('disconnected');
   const [credentialsSubmitted, setCredentialsSubmitted] = useState(false);
   const [credentialsChanged, setCredentialsChanged] = useState(false);
+  const [saveCacheChecked, setSaveCacheChecked] = useState(saveApiKeysInCache);
 
   // Check if we have valid credentials
   useEffect(() => {
@@ -107,6 +108,7 @@ export function SettingsMenu() {
     setHasLoadedMode(false); // Reset hasLoadedMode when credentials change
     setCredentialsSubmitted(true);
     setCredentialsChanged(false);
+    setSaveApiKeysInCache(saveCacheChecked);
   };
   
   const handleLeverageSelect = (symbol: string, leverage: number) => {
@@ -124,6 +126,10 @@ export function SettingsMenu() {
   const handleApiSecretChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setNewApiSecret(e.target.value);
     setCredentialsChanged(true);
+  };
+  
+  const handleSaveCacheChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setSaveCacheChecked(e.target.checked);
   };
   
   const isConnected = connectionStatus === 'connected';
@@ -221,6 +227,18 @@ export function SettingsMenu() {
                       className="w-full px-3 py-1.5 text-xs rounded bg-gray-100 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 text-gray-800 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-binance-yellow/20"
                       placeholder="Enter your API secret"
                     />
+                    <div className="flex items-center mt-2">
+                      <input
+                        type="checkbox"
+                        id="saveApiKeysInCache"
+                        checked={saveCacheChecked}
+                        onChange={handleSaveCacheChange}
+                        className="h-3 w-3 text-binance-yellow rounded border-gray-300 focus:ring-binance-yellow/20"
+                      />
+                      <label htmlFor="saveApiKeysInCache" className="ml-2 text-xs text-gray-500 dark:text-gray-400">
+                        Save API keys in browser cache
+                      </label>
+                    </div>
                   </div>
                   <div>
                     <label className="text-sm text-gray-600 dark:text-gray-400 block mb-2">

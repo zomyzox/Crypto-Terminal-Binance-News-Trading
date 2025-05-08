@@ -3,6 +3,7 @@ import CryptoJS from 'crypto-js';
 
 type PositionMode = 'one-way' | 'hedge';
 type NetworkType = 'testnet' | 'mainnet';
+type PriceChangeMode = 'day-close' | 'news-time';
 
 // Unique keys for LocalStorage
 const ENCRYPTION_KEY = 'cryptoTerminal_encKey';
@@ -10,6 +11,7 @@ const STORAGE_KEY_API_KEY = 'cryptoTerminal_apiKey';
 const STORAGE_KEY_API_SECRET = 'cryptoTerminal_apiSecret';
 const STORAGE_KEY_NETWORK = 'cryptoTerminal_network';
 const STORAGE_KEY_SAVE_CREDENTIALS = 'cryptoTerminal_saveCredentials';
+const STORAGE_KEY_PRICE_CHANGE_MODE = 'cryptoTerminal_priceChangeMode';
 
 // Define types for trade buttons
 export interface TradeButtonValues {
@@ -24,10 +26,12 @@ interface SettingsContextType {
   apiSecret: string;
   network: NetworkType;
   positionMode: PositionMode;
+  priceChangeMode: PriceChangeMode;
   tradeButtons: SymbolTradeButtons;
   globalTradeButtons: TradeButtonValues;
   saveCredentialsInCache: boolean;
   setPositionMode: (mode: PositionMode) => void;
+  setPriceChangeMode: (mode: PriceChangeMode) => void;
   setApiCredentials: (key: string, secret: string, network: NetworkType) => void;
   setSymbolTradeButtons: (symbol: string, values: TradeButtonValues) => void;
   updateGlobalTradeButtons: (values: TradeButtonValues) => void;
@@ -66,6 +70,10 @@ const encryptData = (data: string): string => {
 
 export function SettingsProvider({ children }: { children: React.ReactNode }) {
   const [positionMode, setPositionMode] = useState<PositionMode>('one-way');
+  const [priceChangeMode, setPriceChangeMode] = useState<PriceChangeMode>(() => {
+    const savedMode = localStorage.getItem(STORAGE_KEY_PRICE_CHANGE_MODE);
+    return savedMode ? savedMode as PriceChangeMode : 'day-close';
+  });
   
   // LocalStorage'dan şifreli API anahtarlarını al
   const [{ apiKey, apiSecret, network }, setCredentials] = useState(() => {
@@ -97,6 +105,11 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
     const saved = localStorage.getItem(STORAGE_KEY_GLOBAL_BUTTONS);
     return saved ? JSON.parse(saved) : DEFAULT_TRADE_BUTTONS;
   });
+
+  // Save priceChangeMode to localStorage when it changes
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEY_PRICE_CHANGE_MODE, priceChangeMode);
+  }, [priceChangeMode]);
 
   // Save to localStorage when trade buttons change
   useEffect(() => {
@@ -155,6 +168,8 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
     <SettingsContext.Provider value={{ 
       positionMode, 
       setPositionMode,
+      priceChangeMode,
+      setPriceChangeMode,
       apiKey,
       apiSecret,
       network,

@@ -166,7 +166,7 @@ const parseTwitterContent = (description: string) => {
 
 export function NewsCard({ news }: NewsCardProps) {
   const symbols = news.symbol ? news.symbol.split(',').filter(Boolean) : [];
-  const { positionMode, tradeButtons, globalTradeButtons, apiKey } = useSettings();
+  const { positionMode, tradeButtons, globalTradeButtons, apiKey, priceChangeMode } = useSettings();
   
   // Ensure timestamp is a number
   const timestamp = typeof news.timestamp === 'string' 
@@ -203,7 +203,7 @@ export function NewsCard({ news }: NewsCardProps) {
   }, [timestamp]);
   
   const marketDataMap = symbols.reduce<Record<string, ReturnType<typeof useMarketData>>>((acc, symbol) => {
-    acc[symbol] = useMarketData(symbol);
+    acc[symbol] = useMarketData(symbol, priceChangeMode === 'news-time' ? timestamp : undefined);
     return acc;
   }, {});
   
@@ -346,17 +346,26 @@ export function NewsCard({ news }: NewsCardProps) {
                       <div className="flex items-center">
                         <span 
                           className={`${
-                            parseFloat(marketDataMap[symbol]?.priceChangePercent || '0') >= 0 
+                            parseFloat(priceChangeMode === 'news-time' && marketDataMap[symbol]?.newsPriceChange
+                              ? marketDataMap[symbol]?.newsPriceChange || '0'
+                              : marketDataMap[symbol]?.priceChangePercent || '0') >= 0 
                               ? 'text-green-500' 
                               : 'text-red-500'
                           } font-medium flex items-center`}
                         >
-                          {parseFloat(marketDataMap[symbol]?.priceChangePercent || '0') >= 0 ? (
+                          {parseFloat(priceChangeMode === 'news-time' && marketDataMap[symbol]?.newsPriceChange
+                            ? marketDataMap[symbol]?.newsPriceChange || '0'
+                            : marketDataMap[symbol]?.priceChangePercent || '0') >= 0 ? (
                             <TrendingUp size={14} className="mr-1" />
                           ) : (
                             <TrendingDown size={14} className="mr-1" />
                           )}
-                          {parseFloat(marketDataMap[symbol]?.priceChangePercent || '0').toFixed(2)}%
+                          {parseFloat(priceChangeMode === 'news-time' && marketDataMap[symbol]?.newsPriceChange
+                            ? marketDataMap[symbol]?.newsPriceChange || '0'
+                            : marketDataMap[symbol]?.priceChangePercent || '0').toFixed(2)}%
+                          {priceChangeMode === 'news-time' && (
+                            <span className="text-xs ml-1 text-gray-400">(news)</span>
+                          )}
                         </span>
                       </div>
                     )}

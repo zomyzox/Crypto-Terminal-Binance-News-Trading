@@ -5,6 +5,7 @@ import { binanceService } from '../services/binanceService';
 import { useState, useEffect } from 'react';
 import type { LeverageBracket } from '../types';
 import { TradingConfigModal } from './TradingConfigModal';
+import { UIConfigModal } from './UIConfigModal';
 
 export function SettingsMenu() {
   const [isOpen, setIsOpen] = React.useState(false);
@@ -26,6 +27,7 @@ export function SettingsMenu() {
   const [isLoadingMode, setIsLoadingMode] = useState(false);
   const [hasLoadedMode, setHasLoadedMode] = useState(false);
   const [isTradingConfigOpen, setIsTradingConfigOpen] = useState(false);
+  const [isUIConfigOpen, setIsUIConfigOpen] = useState(false);
   const [leverageBrackets, setLeverageBrackets] = useState<LeverageBracket[]>([]);
   const [selectedLeverages, setSelectedLeverages] = useState<Record<string, number>>({});
   const [connectionStatus, setConnectionStatus] = useState<'connecting' | 'connected' | 'disconnected'>('disconnected');
@@ -378,6 +380,19 @@ export function SettingsMenu() {
                       </button>
                     </div>
                   )}
+                  
+                  {/* UI Configuration butonu - her zaman görünür */}
+                  <div className={`${hasValidCredentials && isConnected ? 'mt-4' : 'mt-4 pt-4 border-t border-gray-200 dark:border-gray-700'}`}>
+                    <button
+                      onClick={() => {
+                        setIsUIConfigOpen(true);
+                        setIsOpen(false);
+                      }}
+                      className="w-full px-3 py-2 text-sm font-medium rounded bg-binance-gray text-white hover:bg-binance-lightgray transition-all transform hover:-translate-y-1 duration-200"
+                    >
+                      UI Configuration
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
@@ -391,6 +406,11 @@ export function SettingsMenu() {
         leverageBrackets={leverageBrackets}
         selectedLeverages={selectedLeverages}
         onLeverageSelect={handleLeverageSelect}
+      />
+      
+      <UIConfigModal
+        isOpen={isUIConfigOpen}
+        onClose={() => setIsUIConfigOpen(false)}
       />
     </div>
   );
